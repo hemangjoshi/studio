@@ -1,14 +1,7 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    /**
-     * FIREBASE SECURITY RULES
-     * 
-     * - users: Private profile access (owner only).
-     * - codeSnippets: Public read for public snippets, owner read/write for all.
-     * - globalChatMessages: Authenticated read/create, owner update/delete.
-     */
 
     function isSignedIn() {
       return request.auth != null;
@@ -16,31 +9,24 @@ service cloud.firestore {
 
     // --- User Profiles ---
     match /users/{userId} {
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
     // --- Code Snippets ---
     match /codeSnippets/{snippetId} {
-      // Allow read (get and list) if the snippet is public OR if the user is the author.
-      // Firestore requires queries to match these constraints to satisfy the rules.
-      allow read: if resource.data.isPublic == true || (isSignedIn() && resource.data.authorId == request.auth.uid);
+      // Split read into get and list for better clarity
+      allow get: if resource.data.isPublic == true || (isSignedIn() && resource.data.authorId == request.auth.uid);
+      allow list: if resource.data.isPublic == true || (isSignedIn() && resource.data.authorId == request.auth.uid);
       
-      // Creation requires the user to be signed in and set themselves as the author.
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
-      
-      // Updates and deletes are restricted to the author.
       allow update, delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
     }
 
     // --- Global Chat ---
     match /globalChatMessages/{messageId} {
-      // Any signed-in user can read the global chat history.
       allow read: if isSignedIn();
-      
-      // Users can only create messages where they are the verified sender.
       allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
-      
-      // Users can only manage their own messages.
       allow update, delete: if isSignedIn() && resource.data.senderId == request.auth.uid;
     }
   }

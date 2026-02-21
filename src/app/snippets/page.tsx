@@ -1,12 +1,12 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { 
   collection, 
   query, 
   where, 
-  orderBy, 
   serverTimestamp 
 } from "firebase/firestore";
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
@@ -42,23 +42,21 @@ export default function SnippetsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
-  // Query for public snippets: All snippets where isPublic is true
+  // Query for public snippets: Removed orderBy to avoid index requirement
   const publicQuery = useMemoFirebase(() => {
     return query(
       collection(db, "codeSnippets"), 
-      where("isPublic", "==", true),
-      orderBy("createdAt", "desc")
+      where("isPublic", "==", true)
     );
   }, [db]);
   const { data: publicSnippets, isLoading: publicLoading } = useCollection(publicQuery);
 
-  // Query for user's own snippets: All snippets where authorId matches current user
+  // Query for user's own snippets: Removed orderBy to avoid index requirement
   const myQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
       collection(db, "codeSnippets"), 
-      where("authorId", "==", user.uid),
-      orderBy("createdAt", "desc")
+      where("authorId", "==", user.uid)
     );
   }, [db, user?.uid]);
   const { data: mySnippets, isLoading: myLoading } = useCollection(myQuery);
@@ -125,12 +123,21 @@ export default function SnippetsPage() {
     </Card>
   );
 
-  const filterFn = (s: any) => 
-    s.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    s.codeContent?.toLowerCase().includes(searchTerm.toLowerCase());
+  const filterAndSort = (snippets: any[]) => {
+    return snippets
+      .filter(s => 
+        s.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        s.codeContent?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) => {
+        const timeA = a.createdAt?.toMillis?.() || 0;
+        const timeB = b.createdAt?.toMillis?.() || 0;
+        return timeB - timeA;
+      });
+  };
 
-  const filteredPublic = (publicSnippets || []).filter(filterFn);
-  const filteredMy = (mySnippets || []).filter(filterFn);
+  const filteredPublic = useMemo(() => filterAndSort(publicSnippets || []), [publicSnippets, searchTerm]);
+  const filteredMy = useMemo(() => filterAndSort(mySnippets || []), [mySnippets, searchTerm]);
 
   return (
     <div className="space-y-8 pb-12">

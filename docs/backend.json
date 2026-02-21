@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -46,7 +47,11 @@
         },
         "authorId": {
           "type": "string",
-          "description": "Reference to the UserProfile who created this snippet. (Relationship: UserProfile 1:N CodeSnippet)"
+          "description": "Reference to the UserProfile who created this snippet."
+        },
+        "authorName": {
+          "type": "string",
+          "description": "The display name of the author (denormalized)."
         },
         "createdAt": {
           "type": "string",
@@ -55,7 +60,7 @@
         },
         "isPublic": {
           "type": "boolean",
-          "description": "A flag indicating whether the snippet is publicly visible to all users (true) or private to the author (false)."
+          "description": "A flag indicating whether the snippet is publicly visible."
         }
       },
       "required": [
@@ -79,15 +84,15 @@
         },
         "senderId": {
           "type": "string",
-          "description": "Reference to the UserProfile who sent this message. (Relationship: UserProfile 1:N ChatMessage)"
+          "description": "Reference to the UserProfile who sent this message."
         },
         "senderName": {
           "type": "string",
-          "description": "The display name of the user who sent the message (denormalized from UserProfile for efficient chat display)."
+          "description": "The display name of the user who sent the message."
         },
         "senderPhotoURL": {
           "type": "string",
-          "description": "URL to the profile picture of the user who sent the message (denormalized from UserProfile for efficient chat display).",
+          "description": "URL to the profile picture of the user who sent the message.",
           "format": "uri"
         },
         "text": {
@@ -113,60 +118,21 @@
   "auth": {
     "providers": [
       "password",
-      "anonymous"
+      "google.com"
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Stores user profile data. Each document represents a single user's public profile, accessible only by the owning user (via matching `userId` to `request.auth.uid`).",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user, corresponding to Firebase Authentication UID."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/codeSnippets/{codeSnippetId}",
-        "definition": {
-          "entityName": "CodeSnippet",
-          "schema": {
-            "$ref": "#/backend/entities/CodeSnippet"
-          },
-          "description": "Stores all code snippets, both public and private. Includes denormalized 'authorId' for ownership authorization and 'isPublic' for visibility. Security rules will enforce access based on these fields, requiring client queries to include 'isPublic' or 'authorId' filters for list operations to adhere to QAPs.",
-          "params": [
-            {
-              "name": "codeSnippetId",
-              "description": "The unique identifier for a specific code snippet."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/globalChatMessages/{chatMessageId}",
-        "definition": {
-          "entityName": "ChatMessage",
-          "schema": {
-            "$ref": "#/backend/entities/ChatMessage"
-          },
-          "description": "Stores messages for the global public chat room. Includes denormalized 'senderId', 'senderName', and 'senderPhotoURL' for efficient display and authorization independence. Any authenticated user can read and write to this collection.",
-          "params": [
-            {
-              "name": "chatMessageId",
-              "description": "The unique identifier for a specific chat message."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "The Firestore structure is designed to be secure, scalable, and debuggable, adhering to the core design principles and strategy mandates. \n\n**Authorization Independence via Denormalization:**\n1.  **UserProfile (`/users/{userId}`):** Ownership is inherently tied to the document path (the `userId` in the path matches `request.auth.uid`), ensuring direct authorization without `get()` calls.\n2.  **CodeSnippet (`/codeSnippets/{codeSnippetId}`):** Each `CodeSnippet` document explicitly includes an `authorId` field. This denormalization allows security rules to evaluate ownership directly (e.g., `resource.data.authorId == request.auth.uid`) without needing to perform a `get()` operation on a parent user document. This is crucial for atomic operations and simplifies rule debugging.\n3.  **ChatMessage (`/globalChatMessages/{chatMessageId}`):** Each `ChatMessage` document includes `senderId`, `senderName`, and `senderPhotoURL`. While `senderId` is used for authorization (ensuring an authenticated user is sending the message), `senderName` and `senderPhotoURL` are denormalized from the `UserProfile`. This allows chat messages to be displayed efficiently without requiring additional `get()` calls to the `users` collection for each message's sender details, thus supporting read authorization independence and performance.\n\n**QAPs (Rules are not Filters) and Structural Segregation:**\n1.  **UserProfile (`/users/{userId}`):** This collection maintains a homogeneous security posture where each user can only read/write their own profile. This naturally aligns with QAPs, as `list` operations on `/users` are typically restricted to prevent exposing all user profiles, or explicitly filtered by `request.auth.uid` for the current user's profile.\n2.  **ChatMessage (`/globalChatMessages/{chatMessageId}`):** This collection is designed for a global public chat, meaning all authenticated users have read and write access. This homogeneous security posture fully supports QAPs; any authenticated user can list all messages, and the rules enforce this broad access consistently.\n3.  **CodeSnippet (`/codeSnippets/{codeSnippetId}`):** The user explicitly requested a single collection for `CodeSnippet` with an `isPublic` flag to distinguish between public and private snippets. While ideal structural segregation would use separate collections (e.g., `/publicCodeSnippets` and `/users/{userId}/privateCodeSnippets`) to strictly separate security concerns and ease QAP enforcement, this design accommodates the user's specific request. To comply with the \"Rules are not Filters\" principle: \n    *   **For `list` operations (e.g., Public Feed, My Snippets):** The client application *must* include appropriate `where` clauses (e.g., `where('isPublic', '==', true)` for public snippets, or `where('authorId', '==', request.auth.uid)` for user-specific snippets). The Firestore security rules will then *validate* that these required filters are present in the client's query. The rules will not *add* these filters but will *deny* any `list` request that does not include the necessary `isPublic` or `authorId` filters, thereby enforcing the desired access control without acting as a filter themselves. \n    *   **For `get` operations on specific documents:** The rules will directly check `resource.data.isPublic == true` for public access or `resource.data.authorId == request.auth.uid` for owner-only access. \n\nThis structure ensures that security rules are explicit, atomic operations are feasible (especially for creating documents without dependency checks), and performance is optimized through strategic denormalization and clear authorization fields."
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores user profile data."
+    },
+    "/codeSnippets/{snippetId}": {
+      "schema": "CodeSnippet",
+      "description": "Stores code snippets with visibility controls."
+    },
+    "/globalChatMessages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Stores global chat messages."
+    }
   }
 }
