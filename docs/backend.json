@@ -5,7 +5,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UserProfile",
       "type": "object",
-      "description": "Represents a user's public profile information within the application. Authentication data is managed externally by Firebase Authentication.",
+      "description": "Represents a user's public profile information within the application.",
       "properties": {
         "id": {
           "type": "string",
@@ -31,7 +31,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "CodeSnippet",
       "type": "object",
-      "description": "Represents a single code snippet created by a user, with options for public or private visibility.",
+      "description": "Represents a single code snippet with AI-enhanced metadata.",
       "properties": {
         "id": {
           "type": "string",
@@ -44,6 +44,14 @@
         "codeContent": {
           "type": "string",
           "description": "The actual code content of the snippet."
+        },
+        "language": {
+          "type": "string",
+          "description": "The programming language of the snippet (e.g., javascript, python)."
+        },
+        "aiExplanation": {
+          "type": "string",
+          "description": "An optional AI-generated explanation of what the code does."
         },
         "authorId": {
           "type": "string",
