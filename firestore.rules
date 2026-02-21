@@ -15,12 +15,20 @@ service cloud.firestore {
 
     // --- Code Snippets ---
     match /codeSnippets/{snippetId} {
-      // Split read into get and list for better clarity
-      allow get: if resource.data.isPublic == true || (isSignedIn() && resource.data.authorId == request.auth.uid);
-      allow list: if resource.data.isPublic == true || (isSignedIn() && resource.data.authorId == request.auth.uid);
+      // Public snippets are readable by everyone, private ones only by the author
+      allow get, list: if resource.data.isPublic == true || (isSignedIn() && resource.data.authorId == request.auth.uid);
       
+      // Only the author can create or delete their own snippets
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
+
+      // Update logic: 
+      // 1. Author can update anything.
+      // 2. Any signed-in user can add an AI explanation to a public snippet (Community enhancement).
+      allow update: if isSignedIn() && (
+        resource.data.authorId == request.auth.uid || 
+        (resource.data.isPublic == true && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['aiExplanation']))
+      );
     }
 
     // --- Global Chat ---

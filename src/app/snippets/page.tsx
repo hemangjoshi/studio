@@ -94,6 +94,17 @@ export default function SnippetsPage() {
 
   const handleAISummarize = async (snippet: any) => {
     if (snippet.aiExplanation) return;
+    
+    // Protection against unauthenticated updates
+    if (!user) {
+      toast({ 
+        variant: "destructive", 
+        title: "Sign-in Required", 
+        description: "Please sign in to generate AI explanations for snippets." 
+      });
+      return;
+    }
+
     setExplainingId(snippet.id);
     try {
       const result = await explainSnippet({ code: snippet.codeContent, language: snippet.language });
