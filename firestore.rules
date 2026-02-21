@@ -35,7 +35,10 @@ service cloud.firestore {
     match /globalChatMessages/{messageId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.senderId == request.auth.uid;
+      // Allow users to delete their own messages
+      allow delete: if isSignedIn() && resource.data.senderId == request.auth.uid;
+      // Users can update their own messages (if we add editing later)
+      allow update: if isSignedIn() && resource.data.senderId == request.auth.uid;
     }
   }
 }
