@@ -34,6 +34,7 @@ import { formatDistanceToNow } from "date-fns";
 export default function SnippetsPage() {
   const { user } = useUser();
   const db = useFirestore();
+  const router = useRouter();
   const [newTitle, setNewTitle] = useState("");
   const [newCode, setNewCode] = useState("");
   const [isPublic, setIsPublic] = useState(true);
@@ -41,7 +42,6 @@ export default function SnippetsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
-  // Public Feed memoized query
   const publicQuery = useMemoFirebase(() => {
     return query(
       collection(db, "codeSnippets"), 
@@ -51,7 +51,6 @@ export default function SnippetsPage() {
   }, [db]);
   const { data: publicSnippets, isLoading: publicLoading } = useCollection(publicQuery);
 
-  // My Snippets memoized query
   const myQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -234,7 +233,7 @@ export default function SnippetsPage() {
             <div className="flex h-64 flex-col items-center justify-center rounded-2xl border border-dashed text-center">
               <Lock className="mb-4 h-12 w-12 text-muted-foreground/30" />
               <p className="text-lg font-medium text-muted-foreground">Sign in to view your collection</p>
-              <Button variant="link" onClick={() => useRouter().push('/login')} className="mt-2">
+              <Button variant="link" onClick={() => router.push('/login')} className="mt-2">
                 Sign In Now
               </Button>
             </div>
