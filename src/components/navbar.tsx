@@ -3,15 +3,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Code, MessageSquare, User, LogOut, LayoutDashboard } from "lucide-react";
-import { auth } from "@/lib/firebase";
+import { Code, MessageSquare, User, LogOut } from "lucide-react";
 import { signOut } from "firebase/auth";
+import { useAuth, useUser } from "@/firebase";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/components/auth-context";
 import { cn } from "@/lib/utils";
 
 export function Navbar() {
-  const { user } = useAuth();
+  const { user } = useUser();
+  const auth = useAuth();
   const pathname = usePathname();
 
   if (!user) return null;

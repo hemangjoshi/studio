@@ -2,17 +2,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@/components/auth-context";
-import { db } from "@/lib/firebase";
+import { useRouter } from "next/navigation";
 import { 
   collection, 
   query, 
   where, 
   orderBy, 
-  onSnapshot, 
-  addDoc, 
   serverTimestamp 
 } from "firebase/firestore";
+import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
+import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,9 +33,8 @@ import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 
 export default function SnippetsPage() {
-  const { user } = useAuth();
-  const [publicSnippets, setPublicSnippets] = useState<any[]>([]);
-  const [mySnippets, setMySnippets] = useState<any[]>([]);
+  const { user } = useUser();
+  const db = useFirestore();
   const [newTitle, setNewTitle] = useState("");
   const [newCode, setNewCode] = useState("");
   const [isPublic, setIsPublic] = useState(true);
@@ -44,35 +42,26 @@ export default function SnippetsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Public Feed listener
-    const qPublic = query(
-      collection(db, "snippets"), 
+  // Public Feed memoized query
+  const publicQuery = useMemoFirebase(() => {
+    return query(
+      collection(db, "codeSnippets"), 
       where("isPublic", "==", true),
       orderBy("createdAt", "desc")
     );
-    const unsubPublic = onSnapshot(qPublic, (snapshot) => {
-      setPublicSnippets(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+  }, [db]);
+  const { data: publicSnippets, isLoading: publicLoading } = useCollection(publicQuery);
 
-    // My Snippets listener
-    let unsubMy = () => {};
-    if (user) {
-      const qMy = query(
-        collection(db, "snippets"), 
-        where("authorId", "==", user.uid),
-        orderBy("createdAt", "desc")
-      );
-      unsubMy = onSnapshot(qMy, (snapshot) => {
-        setMySnippets(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      });
-    }
-
-    return () => {
-      unsubPublic();
-      unsubMy();
-    };
-  }, [user]);
+  // My Snippets memoized query
+  const myQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(
+      collection(db, "codeSnippets"), 
+      where("authorId", "==", user.uid),
+      orderBy("createdAt", "desc")
+    );
+  }, [db, user]);
+  const { data: mySnippets, isLoading: myLoading } = useCollection(myQuery);
 
   const handleCreateSnippet = async () => {
     if (!user) return;
@@ -81,22 +70,19 @@ export default function SnippetsPage() {
       return;
     }
 
-    try {
-      await addDoc(collection(db, "snippets"), {
-        title: newTitle,
-        codeContent: newCode,
-        isPublic,
-        authorId: user.uid,
-        authorName: user.displayName || user.email?.split("@")[0],
-        createdAt: serverTimestamp(),
-      });
-      setIsDialogOpen(false);
-      setNewTitle("");
-      setNewCode("");
-      toast({ title: "Snippet created!" });
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Error creating snippet", description: error.message });
-    }
+    addDocumentNonBlocking(collection(db, "codeSnippets"), {
+      title: newTitle,
+      codeContent: newCode,
+      isPublic,
+      authorId: user.uid,
+      authorName: user.displayName || user.email?.split("@")[0],
+      createdAt: serverTimestamp(),
+    });
+
+    setIsDialogOpen(false);
+    setNewTitle("");
+    setNewCode("");
+    toast({ title: "Snippet creation initiated!" });
   };
 
   const SnippetCard = ({ snippet }: { snippet: any }) => (
@@ -109,7 +95,7 @@ export default function SnippetsPage() {
               <User className="h-3 w-3" />
               <span>{snippet.authorName}</span>
               <span>•</span>
-              <span>{snippet.createdAt ? formatDistanceToNow(snippet.createdAt.toDate()) + ' ago' : 'Just now'}</span>
+              <span>{snippet.createdAt?.toDate ? formatDistanceToNow(snippet.createdAt.toDate()) + ' ago' : 'Just now'}</span>
             </div>
           </div>
           <Badge variant={snippet.isPublic ? "secondary" : "outline"} className="flex gap-1">
@@ -135,15 +121,12 @@ export default function SnippetsPage() {
     </Card>
   );
 
-  const filteredPublic = publicSnippets.filter(s => 
-    s.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    s.codeContent.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filterFn = (s: any) => 
+    s.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    s.codeContent?.toLowerCase().includes(searchTerm.toLowerCase());
 
-  const filteredMy = mySnippets.filter(s => 
-    s.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    s.codeContent.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPublic = (publicSnippets || []).filter(filterFn);
+  const filteredMy = (mySnippets || []).filter(filterFn);
 
   return (
     <div className="space-y-8 pb-12">
@@ -227,7 +210,11 @@ export default function SnippetsPage() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="public">
-          {filteredPublic.length > 0 ? (
+          {publicLoading ? (
+             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 opacity-50">
+                {[1,2,3].map(i => <div key={i} className="h-64 rounded-xl bg-card animate-pulse border" />)}
+             </div>
+          ) : filteredPublic.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filteredPublic.map((snippet) => (
                 <SnippetCard key={snippet.id} snippet={snippet} />
@@ -244,6 +231,10 @@ export default function SnippetsPage() {
           {!user ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">Sign in to view your personal snippets</p>
+            </div>
+          ) : myLoading ? (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 opacity-50">
+               {[1,2].map(i => <div key={i} className="h-64 rounded-xl bg-card animate-pulse border" />)}
             </div>
           ) : filteredMy.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">

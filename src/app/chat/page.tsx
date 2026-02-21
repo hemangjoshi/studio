@@ -2,18 +2,16 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useAuth } from "@/components/auth-context";
 import { useRouter } from "next/navigation";
-import { db } from "@/lib/firebase";
 import { 
   collection, 
   query, 
   orderBy, 
   limit, 
-  onSnapshot, 
-  addDoc, 
   serverTimestamp 
 } from "firebase/firestore";
+import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
+import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,30 +21,27 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function ChatPage() {
-  const { user, loading: authLoading } = useAuth();
-  const [messages, setMessages] = useState<any[]>([]);
+  const { user, isUserLoading } = useUser();
+  const db = useFirestore();
   const [newMessage, setNewMessage] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!isUserLoading && !user) {
       router.push("/login");
-      return;
     }
+  }, [user, isUserLoading, router]);
 
-    const q = query(
-      collection(db, "globalChat"),
+  const chatQuery = useMemoFirebase(() => {
+    return query(
+      collection(db, "globalChatMessages"),
       orderBy("timestamp", "asc"),
       limit(100)
     );
+  }, [db]);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-
-    return () => unsubscribe();
-  }, [user, authLoading, router]);
+  const { data: messages } = useCollection(chatQuery);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -58,21 +53,17 @@ export default function ChatPage() {
     e.preventDefault();
     if (!newMessage.trim() || !user) return;
 
-    try {
-      await addDoc(collection(db, "globalChat"), {
-        text: newMessage,
-        senderId: user.uid,
-        senderName: user.displayName || user.email?.split("@")[0],
-        senderPhoto: user.photoURL,
-        timestamp: serverTimestamp(),
-      });
-      setNewMessage("");
-    } catch (error) {
-      console.error("Error sending message:", error);
-    }
+    addDocumentNonBlocking(collection(db, "globalChatMessages"), {
+      text: newMessage,
+      senderId: user.uid,
+      senderName: user.displayName || user.email?.split("@")[0],
+      senderPhotoURL: user.photoURL,
+      timestamp: serverTimestamp(),
+    });
+    setNewMessage("");
   };
 
-  if (authLoading || !user) return null;
+  if (isUserLoading || !user) return null;
 
   return (
     <div className="mx-auto flex h-[calc(100vh-10rem)] max-w-4xl flex-col gap-4">
@@ -98,13 +89,13 @@ export default function ChatPage() {
       <Card className="flex flex-1 flex-col overflow-hidden bg-card/50 backdrop-blur-sm">
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-6">
-            {messages.length === 0 && (
+            {!messages?.length && (
               <div className="flex h-full flex-col items-center justify-center py-20 text-center opacity-40">
                 <Send className="mb-4 h-12 w-12" />
                 <p>Be the first to start the conversation!</p>
               </div>
             )}
-            {messages.map((msg, index) => {
+            {messages?.map((msg, index) => {
               const isMe = msg.senderId === user.uid;
               return (
                 <div 
@@ -112,14 +103,14 @@ export default function ChatPage() {
                   className={`flex items-start gap-3 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
                 >
                   <Avatar className="h-8 w-8 border border-border mt-1">
-                    <AvatarImage src={msg.senderPhoto} />
+                    <AvatarImage src={msg.senderPhotoURL} />
                     <AvatarFallback>{msg.senderName?.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div className={`flex max-w-[70%] flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                     <div className="flex items-center gap-2 mb-1 px-1">
                       <span className="text-xs font-semibold">{msg.senderName}</span>
                       <span className="text-[10px] text-muted-foreground">
-                        {msg.timestamp ? format(msg.timestamp.toDate(), "HH:mm") : ""}
+                        {msg.timestamp?.toDate ? format(msg.timestamp.toDate(), "HH:mm") : ""}
                       </span>
                     </div>
                     <div className={`rounded-2xl px-4 py-2 text-sm ${

@@ -2,11 +2,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@/components/auth-context";
 import { useRouter } from "next/navigation";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc } from "firebase/firestore";
 import { updateProfile } from "firebase/auth";
+import { useFirestore, useUser } from "@/firebase";
+import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function ProfilePage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isUserLoading } = useUser();
+  const db = useFirestore();
   const [displayName, setDisplayName] = useState("");
   const [photoURL, setPhotoURL] = useState("");
   const [saving, setSaving] = useState(false);
@@ -23,28 +24,28 @@ export default function ProfilePage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!isUserLoading && !user) {
       router.push("/login");
     } else if (user) {
       setDisplayName(user.displayName || "");
       setPhotoURL(user.photoURL || "");
     }
-  }, [user, authLoading, router]);
+  }, [user, isUserLoading, router]);
 
   const handleUpdate = async () => {
     if (!user) return;
     setSaving(true);
     try {
-      // Update Firebase Auth
+      // Update Firebase Auth (blocking update for local session consistency)
       await updateProfile(user, { displayName, photoURL });
       
-      // Update Firestore user record
-      await updateDoc(doc(db, "users", user.uid), {
+      // Update Firestore user record (non-blocking)
+      updateDocumentNonBlocking(doc(db, "users", user.uid), {
         displayName,
         photoURL,
       });
 
-      toast({ title: "Profile updated successfully" });
+      toast({ title: "Profile update initiated" });
     } catch (error: any) {
       toast({ 
         variant: "destructive", 
@@ -56,7 +57,7 @@ export default function ProfilePage() {
     }
   };
 
-  if (authLoading || !user) return null;
+  if (isUserLoading || !user) return null;
 
   return (
     <div className="max-w-2xl mx-auto py-8">
@@ -97,7 +98,7 @@ export default function ProfilePage() {
         <CardFooter className="flex justify-between">
           <Button variant="outline" onClick={() => router.back()}>Cancel</Button>
           <Button onClick={handleUpdate} disabled={saving}>
-            {saving ? "Saving Changes..." : "Save Changes"}
+            {saving ? "Updating..." : "Save Changes"}
           </Button>
         </CardFooter>
       </Card>

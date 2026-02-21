@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { 
   signInWithEmailAndPassword, 
@@ -9,8 +9,9 @@ import {
   signInWithPopup, 
   GoogleAuthProvider 
 } from "firebase/auth";
-import { auth, db } from "@/lib/firebase";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
+import { useAuth, useFirestore, useUser } from "@/firebase";
+import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -23,29 +24,35 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  
+  const auth = useAuth();
+  const db = useFirestore();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      router.push("/snippets");
+    }
+  }, [user, isUserLoading, router]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      let userCredential;
       if (isLogin) {
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(auth, email, password);
       } else {
-        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         // Create user doc
-        await setDoc(doc(db, "users", userCredential.user.uid), {
-          uid: userCredential.user.uid,
-          email: email,
+        setDocumentNonBlocking(doc(db, "users", userCredential.user.uid), {
+          id: userCredential.user.uid,
           displayName: email.split("@")[0],
           photoURL: `https://picsum.photos/seed/${userCredential.user.uid}/200/200`,
-          createdAt: new Date().toISOString(),
-        });
+        }, { merge: true });
       }
       toast({ title: isLogin ? "Welcome back!" : "Account created!" });
-      router.push("/snippets");
     } catch (error: any) {
       toast({ 
         variant: "destructive", 
@@ -65,15 +72,12 @@ export default function LoginPage() {
 
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (!userDoc.exists()) {
-        await setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          email: user.email,
+        setDocumentNonBlocking(doc(db, "users", user.uid), {
+          id: user.uid,
           displayName: user.displayName || user.email?.split("@")[0],
           photoURL: user.photoURL || `https://picsum.photos/seed/${user.uid}/200/200`,
-          createdAt: new Date().toISOString(),
-        });
+        }, { merge: true });
       }
-      router.push("/snippets");
     } catch (error: any) {
       toast({ 
         variant: "destructive", 
@@ -82,6 +86,8 @@ export default function LoginPage() {
       });
     }
   };
+
+  if (isUserLoading) return null;
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center">
