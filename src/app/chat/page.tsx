@@ -30,6 +30,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+/**
+ * A client-safe component for rendering formatted time to avoid hydration mismatches.
+ */
+function ChatTime({ timestamp }: { timestamp: any }) {
+  const [formatted, setFormatted] = useState<string>("");
+
+  useEffect(() => {
+    if (timestamp?.toDate) {
+      setFormatted(format(timestamp.toDate(), "HH:mm"));
+    }
+  }, [timestamp]);
+
+  return <>{formatted}</>;
+}
+
 export default function ChatPage() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
@@ -151,7 +166,7 @@ export default function ChatPage() {
                     <div className="flex items-center gap-2 mb-1 px-1">
                       <span className="text-[10px] font-bold uppercase tracking-tight opacity-70">{msg.senderName}</span>
                       <span className="text-[9px] text-muted-foreground font-medium">
-                        {msg.timestamp?.toDate ? format(msg.timestamp.toDate(), "HH:mm") : ""}
+                        <ChatTime timestamp={msg.timestamp} />
                       </span>
                     </div>
                     

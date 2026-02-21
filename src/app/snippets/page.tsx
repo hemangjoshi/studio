@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { 
   collection, 
   query, 
@@ -80,10 +80,26 @@ import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { explainSnippet } from "@/ai/flows/explain-snippet";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const LANGUAGES = [
   "javascript", "typescript", "python", "html", "css", "sql", "bash", "json", "rust", "go", "java"
 ];
+
+/**
+ * A client-safe component for rendering relative time to avoid hydration mismatches.
+ */
+function TimeAgo({ timestamp }: { timestamp: any }) {
+  const [timeStr, setTimeStr] = useState<string>("Incoming");
+
+  useEffect(() => {
+    if (timestamp?.toDate) {
+      setTimeStr(formatDistanceToNow(timestamp.toDate()) + ' ago');
+    }
+  }, [timestamp]);
+
+  return <>{timeStr}</>;
+}
 
 export default function SnippetsPage() {
   const { user } = useUser();
@@ -280,7 +296,7 @@ export default function SnippetsPage() {
         </CardContent>
 
         <CardFooter className="p-3 sm:p-4 text-[9px] text-muted-foreground border-t bg-muted/5 flex justify-between items-center font-bold">
-          <span>{snippet.createdAt?.toDate ? formatDistanceToNow(snippet.createdAt.toDate()) + ' ago' : 'Incoming'}</span>
+          <span><TimeAgo timestamp={snippet.createdAt} /></span>
           <span className="uppercase tracking-widest opacity-40">System Node 01</span>
         </CardFooter>
       </Card>
