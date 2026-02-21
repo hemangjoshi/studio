@@ -1,9 +1,8 @@
-
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Code, MessageSquare, User, LogOut } from "lucide-react";
+import { Code, MessageSquare, User, LogOut, LogIn } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useAuth, useUser } from "@/firebase";
 import { Button } from "@/components/ui/button";
@@ -14,20 +13,20 @@ export function Navbar() {
   const auth = useAuth();
   const pathname = usePathname();
 
-  if (!user) return null;
-
-  const navItems = [
+  const navItems = user ? [
     { href: "/snippets", label: "Snippets", icon: Code },
     { href: "/chat", label: "Global Chat", icon: MessageSquare },
     { href: "/profile", label: "Profile", icon: User },
+  ] : [
+    { href: "/snippets", label: "Public Feed", icon: Code },
   ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/80 backdrop-blur-md md:top-0 md:bottom-auto md:border-t-0 md:border-b">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="hidden items-center gap-2 font-headline text-xl font-bold text-primary md:flex">
+        <Link href="/" className="flex items-center gap-2 font-headline text-xl font-bold text-primary">
           <Code className="h-6 w-6" />
-          <span>CodeShare</span>
+          <span className="hidden md:inline">CodeShare</span>
         </Link>
 
         <div className="flex w-full items-center justify-around gap-1 md:w-auto md:justify-end md:gap-4">
@@ -47,14 +46,23 @@ export function Navbar() {
             </Link>
           ))}
           
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => signOut(auth)}
-            className="text-muted-foreground hover:text-destructive"
-          >
-            <LogOut className="h-5 w-5" />
-          </Button>
+          {user ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => signOut(auth)}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          ) : (
+            <Link href="/login">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <LogIn className="h-4 w-4" />
+                <span className="hidden md:inline">Sign In</span>
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
     </nav>

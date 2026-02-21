@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -64,7 +63,10 @@ export default function SnippetsPage() {
   const { data: mySnippets, isLoading: myLoading } = useCollection(myQuery);
 
   const handleCreateSnippet = async () => {
-    if (!user) return;
+    if (!user) {
+      toast({ variant: "destructive", title: "Authentication required", description: "Please sign in to create snippets." });
+      return;
+    }
     if (!newTitle || !newCode) {
       toast({ variant: "destructive", title: "Missing fields", description: "Title and code are required." });
       return;
@@ -75,14 +77,14 @@ export default function SnippetsPage() {
       codeContent: newCode,
       isPublic,
       authorId: user.uid,
-      authorName: user.displayName || user.email?.split("@")[0],
+      authorName: user.displayName || user.email?.split("@")[0] || "Dev User",
       createdAt: serverTimestamp(),
     });
 
     setIsDialogOpen(false);
     setNewTitle("");
     setNewCode("");
-    toast({ title: "Snippet creation initiated!" });
+    toast({ title: "Snippet created successfully!" });
   };
 
   const SnippetCard = ({ snippet }: { snippet: any }) => (
@@ -93,12 +95,12 @@ export default function SnippetsPage() {
             <CardTitle className="text-lg line-clamp-1">{snippet.title}</CardTitle>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <User className="h-3 w-3" />
-              <span>{snippet.authorName}</span>
+              <span>{snippet.authorName || "Anonymous"}</span>
               <span>•</span>
               <span>{snippet.createdAt?.toDate ? formatDistanceToNow(snippet.createdAt.toDate()) + ' ago' : 'Just now'}</span>
             </div>
           </div>
-          <Badge variant={snippet.isPublic ? "secondary" : "outline"} className="flex gap-1">
+          <Badge variant={snippet.isPublic ? "secondary" : "outline"} className="flex gap-1 shrink-0">
             {snippet.isPublic ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
             {snippet.isPublic ? "Public" : "Private"}
           </Badge>
@@ -106,7 +108,7 @@ export default function SnippetsPage() {
       </CardHeader>
       <CardContent className="p-4 pt-2">
         <div className="code-editor relative max-h-40 overflow-hidden rounded-md bg-secondary p-3 text-xs leading-relaxed text-secondary-foreground">
-          <pre className="whitespace-pre-wrap">{snippet.codeContent}</pre>
+          <pre className="whitespace-pre-wrap font-mono">{snippet.codeContent}</pre>
           <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-secondary to-transparent" />
         </div>
       </CardContent>
@@ -171,7 +173,7 @@ export default function SnippetsPage() {
                   <Textarea 
                     id="code" 
                     placeholder="Paste your code here..." 
-                    className="code-editor min-h-[200px] font-mono"
+                    className="code-editor min-h-[200px] font-mono text-xs"
                     value={newCode}
                     onChange={(e) => setNewCode(e.target.value)}
                   />
@@ -229,8 +231,12 @@ export default function SnippetsPage() {
         </TabsContent>
         <TabsContent value="my">
           {!user ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Sign in to view your personal snippets</p>
+            <div className="flex h-64 flex-col items-center justify-center rounded-2xl border border-dashed text-center">
+              <Lock className="mb-4 h-12 w-12 text-muted-foreground/30" />
+              <p className="text-lg font-medium text-muted-foreground">Sign in to view your collection</p>
+              <Button variant="link" onClick={() => useRouter().push('/login')} className="mt-2">
+                Sign In Now
+              </Button>
             </div>
           ) : myLoading ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 opacity-50">

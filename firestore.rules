@@ -3,109 +3,49 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * FIREBASE SECURITY RULES DOCUMENTATION
-     *
-     * Core Philosophy:
-     * This ruleset implements a robust, identity-centric security model designed for a social 
-     * coding and chat application. It prioritizes User Ownership and Authenticated Access while 
-     * leveraging data denormalization to ensure high performance and authorization independence.
-     *
-     * Data Structure:
-     * - /users/{userId}: Private user profiles, strictly owned by the corresponding Auth UID.
-     * - /codeSnippets/{snippetId}: A top-level collection containing both public and private 
-     *   content. Access is governed by an 'isPublic' boolean or ownership via 'authorId'.
-     * - /globalChatMessages/{messageId}: A public, authenticated-only chat stream where 
-     *   identity is verified via 'senderId'.
-     *
-     * Key Security Decisions:
-     * 1. Authorization Independence: Critical IDs (authorId, senderId) are denormalized 
-     *    directly onto documents. This allows the rules to perform single-document 
-     *    evaluations without costly get() lookups to other collections.
-     * 2. Prototyping Flexibility: While authorization (WHO can access) is strictly enforced, 
-     *    the internal shape of data (fields and types) is kept flexible to allow for rapid 
-     *    UI/UX iteration without frequent rules updates.
-     * 3. Rules are Not Filters: For the CodeSnippets collection, users must explicitly 
-     *    query for either their own snippets or public ones. The rules will reject 
-     *    broad "list all" queries that don't specify these constraints.
+     * FIREBASE SECURITY RULES
+     * 
+     * - users: Private profile access (owner only).
+     * - codeSnippets: Public read for public snippets, owner read/write for all.
+     * - globalChatMessages: Authenticated read/create, owner update/delete.
      */
 
-    // --- GLOBAL HELPER FUNCTIONS ---
-
-    /** @description Checks if the request is made by a signed-in user. */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /** @description Checks if the provided ID matches the authenticated user's UID. */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /** @description Validates ownership of an existing document before update/delete. */
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
-    }
-
-    // --- COLLECTION RULES ---
-
-    /**
-     * @description Rules for UserProfile documents. Users can only manage their own profile.
-     * @path /users/{userId}
-     * @allow (get, create) Authenticated user with UID matching the path.
-     * @deny (list) Attempting to list all users in the system.
-     * @principle Path-based ownership and self-creation.
-     */
+    // --- User Profiles ---
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
+      allow read, write: if isOwner(userId);
     }
 
-    /**
-     * @description Rules for CodeSnippets. Supports public visibility and private ownership.
-     * @path /codeSnippets/{codeSnippetId}
-     * @allow (get) If snippet is marked public OR user is the author.
-     * @allow (create) Authenticated user setting themselves as the author.
-     * @deny (update) Changing the authorId of an existing snippet.
-     * @principle Ownership validation with relational integrity and public-access toggle.
-     */
-    match /codeSnippets/{codeSnippetId} {
-      // Get allows public access or owner access
-      allow get: if resource.data.isPublic == true || isOwner(resource.data.authorId);
+    // --- Code Snippets ---
+    match /codeSnippets/{snippetId} {
+      // Allow list and get if public OR if the authenticated user is the author.
+      // We use 'read' to cover both 'get' and 'list' with the same logic.
+      allow read: if resource.data.isPublic == true || (isSignedIn() && resource.data.authorId == request.auth.uid);
       
-      // List follows "Rules are not Filters" - client query must filter by isPublic:true or authorId:uid
-      allow list: if resource.data.isPublic == true || isOwner(resource.data.authorId);
-
+      // Creation requires the user to be signed in and set themselves as author.
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
       
-      allow update: if isExistingOwner(resource.data.authorId) 
-                    && request.resource.data.authorId == resource.data.authorId;
-      
-      allow delete: if isExistingOwner(resource.data.authorId);
+      // Updates and deletes are restricted to the author.
+      allow update, delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
     }
 
-    /**
-     * @description Rules for Global Chat. All authenticated users can participate.
-     * @path /globalChatMessages/{chatMessageId}
-     * @allow (list) Any signed-in user reading the chat history.
-     * @allow (create) Any signed-in user sending a message as themselves.
-     * @deny (delete) Users attempting to delete messages they didn't send.
-     * @principle Authenticated shared access with sender identity verification.
-     */
-    match /globalChatMessages/{chatMessageId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
+    // --- Global Chat ---
+    match /globalChatMessages/{messageId} {
+      // Any signed-in user can read the global chat history.
+      allow read: if isSignedIn();
       
-      // Users can only create messages where they are the sender
+      // Users can only create messages where they are the verified sender.
       allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
       
-      // Users can only update/delete their own messages
-      allow update: if isExistingOwner(resource.data.senderId) 
-                    && request.resource.data.senderId == resource.data.senderId;
-      
-      allow delete: if isExistingOwner(resource.data.senderId);
+      // Users can only manage their own messages.
+      allow update, delete: if isSignedIn() && resource.data.senderId == request.auth.uid;
     }
   }
 }
