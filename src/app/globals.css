@@ -35,7 +35,7 @@
     --popover-foreground: 210 40% 98%;
     --primary: 263.4 70% 50.4%;
     --primary-foreground: 210 20% 98%;
-    --secondary: 244 30% 10%;
+    --secondary: 244 30% 8%;
     --secondary-foreground: 210 40% 98%;
     --muted: 244 30% 10%;
     --muted-foreground: 215 20% 65%;
@@ -54,7 +54,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-body transition-colors duration-500;
+    @apply bg-background text-foreground font-body transition-colors duration-300;
   }
 }
 
@@ -75,9 +75,9 @@
   @apply bg-primary/30 text-foreground;
 }
 
-/* Custom Scrollbar for Pro Feel */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
 }
 
 ::-webkit-scrollbar-track {
@@ -85,5 +85,15 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
+  @apply bg-muted-foreground/10 rounded-full hover:bg-muted-foreground/30 transition-colors border-4 border-transparent bg-clip-padding;
+}
+
+/* Responsive Grid Adjustments */
+@media (max-width: 768px) {
+  .masonry-grid {
+    column-gap: 1rem;
+  }
+  .masonry-item {
+    margin-bottom: 1rem;
+  }
 }

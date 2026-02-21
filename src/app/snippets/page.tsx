@@ -65,7 +65,8 @@ import {
   Grid2X2,
   Trash2,
   MoreVertical,
-  Share2
+  Share2,
+  Check
 } from "lucide-react";
 import { 
   DropdownMenu,
@@ -159,13 +160,21 @@ export default function SnippetsPage() {
 
   const SnippetCard = ({ snippet }: { snippet: any }) => {
     const isOwner = user?.uid === snippet.authorId;
+    const [copied, setCopied] = useState(false);
+
+    const copyCode = () => {
+      navigator.clipboard.writeText(snippet.codeContent);
+      setCopied(true);
+      toast({ title: "Code Copied!", description: "Syntax is now in your clipboard." });
+      setTimeout(() => setCopied(false), 2000);
+    };
 
     return (
-      <Card className="masonry-item group flex flex-col overflow-hidden border-border bg-card/50 transition-all hover:border-primary/50 hover:bg-card hover:shadow-2xl hover:shadow-primary/10">
-        <CardHeader className="p-5 pb-3">
+      <Card className="masonry-item group flex flex-col overflow-hidden border-border bg-card/40 transition-all hover:border-primary/50 hover:bg-card hover:shadow-2xl hover:shadow-primary/5 dark:hover:shadow-primary/10">
+        <CardHeader className="p-4 sm:p-5 pb-3">
           <div className="flex items-start justify-between gap-2">
             <div className="space-y-1.5 overflow-hidden">
-              <CardTitle className="text-lg line-clamp-2 leading-tight font-bold group-hover:text-primary transition-colors">
+              <CardTitle className="text-base sm:text-lg line-clamp-2 leading-tight font-bold group-hover:text-primary transition-colors">
                 {snippet.title}
               </CardTitle>
               <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
@@ -186,19 +195,26 @@ export default function SnippetsPage() {
               {isOwner && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full">
+                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-muted">
                       <MoreVertical className="h-3 w-3" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="rounded-xl">
+                  <DropdownMenuContent align="end" className="rounded-xl min-w-[160px] p-2">
+                    <DropdownMenuItem className="gap-2 font-semibold cursor-pointer py-2" onClick={() => {
+                      navigator.clipboard.writeText(window.location.origin + "/snippets/" + snippet.id);
+                      toast({ title: "Link copied!" });
+                    }}>
+                      <Share2 className="h-4 w-4" />
+                      Share Link
+                    </DropdownMenuItem>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive gap-2 font-semibold">
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive gap-2 font-semibold cursor-pointer py-2">
                           <Trash2 className="h-4 w-4" />
                           Delete Snippet
                         </DropdownMenuItem>
                       </AlertDialogTrigger>
-                      <AlertDialogContent className="rounded-[2rem]">
+                      <AlertDialogContent className="max-w-[90vw] sm:max-w-md rounded-[1.5rem] sm:rounded-[2rem]">
                         <AlertDialogHeader>
                           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                           <AlertDialogDescription>
@@ -217,33 +233,23 @@ export default function SnippetsPage() {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                    <DropdownMenuItem className="gap-2 font-semibold" onClick={() => {
-                      navigator.clipboard.writeText(window.location.origin + "/snippets/" + snippet.id);
-                      toast({ title: "Link copied!" });
-                    }}>
-                      <Share2 className="h-4 w-4" />
-                      Share Link
-                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
             </div>
           </div>
         </CardHeader>
-        <CardContent className="flex-1 p-5 pt-0">
-          <div className="relative group/code rounded-xl bg-secondary/30 p-4 text-[11px] leading-relaxed text-foreground font-mono border border-border/50 group-hover:border-primary/20 transition-all">
-            <pre className="max-h-[300px] overflow-hidden whitespace-pre-wrap">{snippet.codeContent}</pre>
-            <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent opacity-100 group-hover/code:opacity-0 transition-opacity" />
+        <CardContent className="flex-1 p-4 sm:p-5 pt-0">
+          <div className="relative group/code rounded-xl bg-secondary/20 p-4 text-[11px] leading-relaxed text-foreground font-mono border border-border/50 group-hover:border-primary/20 transition-all">
+            <pre className="max-h-[250px] sm:max-h-[300px] overflow-hidden whitespace-pre-wrap">{snippet.codeContent}</pre>
+            <div className="absolute inset-0 bg-gradient-to-t from-card/40 via-transparent to-transparent opacity-100 group-hover/code:opacity-0 transition-opacity" />
             <Button 
               variant="secondary" 
               size="icon" 
-              className="absolute right-2 top-2 h-8 w-8 opacity-0 group-hover/code:opacity-100 transition-all scale-90 group-hover/code:scale-100 shadow-lg bg-card/80 backdrop-blur-sm"
-              onClick={() => {
-                navigator.clipboard.writeText(snippet.codeContent);
-                toast({ title: "Code Copied!", description: "Syntax is now in your clipboard." });
-              }}
+              className="absolute right-2 top-2 h-8 w-8 opacity-0 group-hover/code:opacity-100 transition-all scale-90 group-hover/code:scale-100 shadow-lg bg-card/80 backdrop-blur-sm hover:bg-primary hover:text-white"
+              onClick={copyCode}
             >
-              <Copy className="h-3.5 w-3.5" />
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             </Button>
           </div>
           
@@ -265,7 +271,7 @@ export default function SnippetsPage() {
             <Button 
               variant="ghost" 
               size="sm" 
-              className="mt-4 w-full gap-2 text-primary hover:bg-primary/5 hover:text-primary border border-dashed border-primary/20 rounded-xl"
+              className="mt-4 w-full gap-2 text-primary hover:bg-primary/5 hover:text-primary border border-dashed border-primary/20 rounded-xl py-5"
               disabled={explainingId === snippet.id}
               onClick={() => handleAISummarize(snippet)}
             >
@@ -274,7 +280,7 @@ export default function SnippetsPage() {
             </Button>
           )}
         </CardContent>
-        <CardFooter className="px-5 py-3 text-[10px] text-muted-foreground border-t bg-muted/20 flex justify-between items-center">
+        <CardFooter className="px-4 sm:px-5 py-3 text-[10px] text-muted-foreground border-t bg-muted/10 flex justify-between items-center">
           <span className="font-semibold">{snippet.createdAt?.toDate ? formatDistanceToNow(snippet.createdAt.toDate()) + ' ago' : 'Just now'}</span>
           <div className="flex items-center gap-2 opacity-30">
             <Terminal className="h-3.5 w-3.5" />
@@ -299,57 +305,57 @@ export default function SnippetsPage() {
   const filteredMy = useMemo(() => filterAndSort(mySnippets || []), [mySnippets, searchTerm]);
 
   return (
-    <div className="space-y-12 pb-20">
-      <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+    <div className="space-y-8 sm:space-y-12 pb-20">
+      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div className="space-y-4">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-bold text-primary shadow-sm">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-[10px] sm:text-xs font-bold text-primary shadow-sm w-fit">
             <Sparkles className="h-3 w-3" />
             <span>Discovery Feed v2.0</span>
           </div>
-          <h1 className="text-4xl md:text-6xl font-black tracking-tight bg-gradient-to-br from-foreground via-foreground to-foreground/40 bg-clip-text text-transparent">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-foreground">
             Developer <span className="text-primary">Intelligence</span>
           </h1>
-          <p className="text-muted-foreground text-lg max-w-xl font-medium leading-relaxed">
+          <p className="text-muted-foreground text-base sm:text-lg max-w-xl font-medium leading-relaxed">
             A real-time curated grid of modular code blocks, enhanced by generative AI for the modern developer.
           </p>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
           <div className="relative w-full sm:w-80 group">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-all" />
             <Input 
-              placeholder="Search concepts, syntax, or stack..." 
-              className="pl-12 h-12 rounded-2xl bg-card border-border/60 focus-visible:ring-primary/40 shadow-inner text-base"
+              placeholder="Search concepts, syntax..." 
+              className="pl-12 h-12 rounded-2xl bg-card border-border/60 focus-visible:ring-primary/40 shadow-inner text-base w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="lg" className="h-12 rounded-2xl px-10 shadow-2xl shadow-primary/30 font-black gap-2 hover:scale-[1.02] active:scale-95 transition-all">
+              <Button size="lg" className="w-full sm:w-auto h-12 rounded-2xl px-10 shadow-xl shadow-primary/20 font-black gap-2 hover:scale-[1.02] active:scale-95 transition-all">
                 <Plus className="h-5 w-5" />
                 <span>Publish New</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl sm:rounded-[2.5rem] border-primary/10 bg-card/95 backdrop-blur-2xl shadow-2xl">
+            <DialogContent className="max-w-[95vw] sm:max-w-2xl rounded-[1.5rem] sm:rounded-[2.5rem] border-primary/10 bg-card/95 backdrop-blur-2xl shadow-2xl p-4 sm:p-8 overflow-y-auto max-h-[90vh]">
               <DialogHeader>
-                <DialogTitle className="text-3xl font-black tracking-tighter">Broadcast Discovery</DialogTitle>
+                <DialogTitle className="text-2xl sm:text-3xl font-black tracking-tighter">Broadcast Discovery</DialogTitle>
               </DialogHeader>
-              <div className="space-y-6 py-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4 sm:space-y-6 py-4 sm:py-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase tracking-widest ml-1 text-muted-foreground">Title</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-muted-foreground">Title</Label>
                     <Input 
                       placeholder="e.g. Optimized GraphQL Hook" 
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
-                      className="bg-secondary/20 h-14 rounded-2xl border-none text-base"
+                      className="bg-secondary/20 h-12 sm:h-14 rounded-2xl border-none text-base"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase tracking-widest ml-1 text-muted-foreground">Stack</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-muted-foreground">Stack</Label>
                     <Select value={newLanguage} onValueChange={setNewLanguage}>
-                      <SelectTrigger className="bg-secondary/20 h-14 rounded-2xl border-none text-base">
+                      <SelectTrigger className="bg-secondary/20 h-12 sm:h-14 rounded-2xl border-none text-base">
                         <SelectValue placeholder="Language" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl">
@@ -361,25 +367,25 @@ export default function SnippetsPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest ml-1 text-muted-foreground">Source Code</Label>
+                  <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-muted-foreground">Source Code</Label>
                   <Textarea 
                     placeholder="// Paste your magic syntax here..." 
-                    className="font-mono text-sm bg-secondary/40 min-h-[350px] resize-none rounded-3xl border-none focus-visible:ring-primary/20 p-8 shadow-inner"
+                    className="font-mono text-sm bg-secondary/30 min-h-[250px] sm:min-h-[350px] resize-none rounded-2xl sm:rounded-3xl border-none focus-visible:ring-primary/20 p-4 sm:p-8 shadow-inner"
                     value={newCode}
                     onChange={(e) => setNewCode(e.target.value)}
                   />
                 </div>
-                <div className="flex items-center justify-between rounded-[2rem] border-2 border-dashed border-border p-8 bg-muted/30 transition-colors hover:bg-muted/50">
+                <div className="flex items-center justify-between rounded-2xl sm:rounded-[2rem] border-2 border-dashed border-border p-4 sm:p-8 bg-muted/10 transition-colors">
                   <div className="space-y-1">
-                    <Label className="text-lg font-black tracking-tight">Public Availability</Label>
-                    <p className="text-sm text-muted-foreground font-medium">Enable community collaboration and AI enhancement</p>
+                    <Label className="text-base sm:text-lg font-black tracking-tight">Public Availability</Label>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground font-medium">Enable community collaboration</p>
                   </div>
-                  <Switch checked={isPublic} onCheckedChange={setIsPublic} className="scale-125" />
+                  <Switch checked={isPublic} onCheckedChange={setIsPublic} className="scale-110 sm:scale-125" />
                 </div>
               </div>
-              <DialogFooter className="gap-4">
-                <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="rounded-full h-14 px-8 font-bold text-muted-foreground">Discard</Button>
-                <Button onClick={handleCreateSnippet} className="rounded-2xl h-14 px-16 font-black shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all text-lg">Save to Library</Button>
+              <DialogFooter className="flex-col sm:flex-row gap-3">
+                <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="rounded-full h-12 sm:h-14 px-8 font-bold text-muted-foreground order-2 sm:order-1">Discard</Button>
+                <Button onClick={handleCreateSnippet} className="rounded-2xl h-12 sm:h-14 px-12 sm:px-16 font-black shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all text-base sm:text-lg order-1 sm:order-2">Save to Library</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -387,33 +393,33 @@ export default function SnippetsPage() {
       </div>
 
       <Tabs defaultValue="public" className="w-full">
-        <TabsList className="mb-12 h-16 bg-muted/30 p-2 rounded-full border border-border/40 max-w-lg mx-auto flex shadow-sm backdrop-blur-md">
-          <TabsTrigger value="public" className="flex-1 gap-3 rounded-full data-[state=active]:bg-card data-[state=active]:shadow-xl data-[state=active]:text-primary font-black transition-all text-sm">
-            <Grid2X2 className="h-4 w-4" /> Global Discovery
+        <TabsList className="mb-8 sm:mb-12 h-14 sm:h-16 bg-muted/20 p-2 rounded-full border border-border/40 max-w-sm sm:max-w-lg mx-auto flex shadow-sm backdrop-blur-md">
+          <TabsTrigger value="public" className="flex-1 gap-2 sm:gap-3 rounded-full data-[state=active]:bg-card data-[state=active]:shadow-lg data-[state=active]:text-primary font-black transition-all text-[10px] sm:text-sm">
+            <Grid2X2 className="h-4 w-4" /> Discovery
           </TabsTrigger>
-          <TabsTrigger value="my" className="flex-1 gap-3 rounded-full data-[state=active]:bg-card data-[state=active]:shadow-xl data-[state=active]:text-primary font-black transition-all text-sm">
-            <Lock className="h-4 w-4" /> My Private Vault
+          <TabsTrigger value="my" className="flex-1 gap-2 sm:gap-3 rounded-full data-[state=active]:bg-card data-[state=active]:shadow-lg data-[state=active]:text-primary font-black transition-all text-[10px] sm:text-sm">
+            <Lock className="h-4 w-4" /> My Vault
           </TabsTrigger>
         </TabsList>
         
         <TabsContent value="public" className="mt-0">
           {publicLoading ? (
-             <div className="columns-1 md:columns-2 lg:columns-3 gap-8">
-                {[1,2,3,4,5,6].map(i => <div key={i} className="masonry-item h-[450px] rounded-[2.5rem] bg-card/40 animate-pulse border border-border/10 mb-8" />)}
+             <div className="columns-1 md:columns-2 lg:columns-3 gap-6 sm:gap-8">
+                {[1,2,3,4,5,6].map(i => <div key={i} className="masonry-item h-[300px] sm:h-[450px] rounded-3xl bg-card/40 animate-pulse border border-border/10 mb-6 sm:mb-8" />)}
              </div>
           ) : filteredPublic.length > 0 ? (
-            <div className="columns-1 md:columns-2 lg:columns-3 gap-8 masonry-grid">
+            <div className="columns-1 md:columns-2 lg:columns-3 gap-6 sm:gap-8 masonry-grid">
               {filteredPublic.map((snippet) => (
                 <SnippetCard key={snippet.id} snippet={snippet} />
               ))}
             </div>
           ) : (
-            <div className="flex h-[50vh] flex-col items-center justify-center rounded-[4rem] border-2 border-dashed text-center bg-card/20 border-border/40 backdrop-blur-sm">
-              <div className="p-10 rounded-full bg-secondary/10 mb-8">
-                <Languages className="h-20 w-20 text-muted-foreground/30" />
+            <div className="flex h-[40vh] sm:h-[50vh] flex-col items-center justify-center rounded-3xl sm:rounded-[4rem] border-2 border-dashed text-center bg-card/10 border-border/20 backdrop-blur-sm p-6">
+              <div className="p-6 sm:p-10 rounded-full bg-secondary/10 mb-6 sm:mb-8">
+                <Languages className="h-12 w-12 sm:h-20 sm:w-20 text-muted-foreground/30" />
               </div>
-              <h3 className="text-3xl font-black mb-3">No Concepts Found</h3>
-              <p className="text-muted-foreground max-w-sm text-lg font-medium leading-relaxed">
+              <h3 className="text-2xl sm:text-3xl font-black mb-3">No Concepts Found</h3>
+              <p className="text-muted-foreground max-w-sm text-sm sm:text-lg font-medium leading-relaxed">
                 The library is quiet. Try broadening your search or be the first to publish a new breakthrough.
               </p>
             </div>
@@ -422,36 +428,36 @@ export default function SnippetsPage() {
 
         <TabsContent value="my" className="mt-0">
           {!user ? (
-            <div className="flex h-[50vh] flex-col items-center justify-center rounded-[4rem] border-2 border-dashed text-center bg-card/20 backdrop-blur-sm">
-              <div className="p-10 rounded-full bg-primary/5 mb-8">
-                <Lock className="h-20 w-20 text-primary/30" />
+            <div className="flex h-[40vh] sm:h-[50vh] flex-col items-center justify-center rounded-3xl sm:rounded-[4rem] border-2 border-dashed text-center bg-card/10 backdrop-blur-sm p-6">
+              <div className="p-6 sm:p-10 rounded-full bg-primary/5 mb-6 sm:mb-8">
+                <Lock className="h-12 w-12 sm:h-20 sm:w-20 text-primary/30" />
               </div>
-              <h3 className="text-3xl font-black mb-3">Secure Encryption</h3>
-              <p className="text-muted-foreground max-w-sm text-lg font-medium">
-                Authenticate your session to manage your personal intellectual property and private references.
+              <h3 className="text-2xl sm:text-3xl font-black mb-3">Secure Encryption</h3>
+              <p className="text-muted-foreground max-w-sm text-sm sm:text-lg font-medium">
+                Authenticate your session to manage your personal intellectual property.
               </p>
-              <Button asChild className="mt-10 rounded-2xl px-12 h-14 font-black shadow-2xl shadow-primary/20" size="lg">
+              <Button asChild className="mt-8 sm:mt-10 rounded-2xl px-12 h-14 font-black shadow-xl shadow-primary/20" size="lg">
                 <a href="/login">Authenticate Session</a>
               </Button>
             </div>
           ) : myLoading ? (
-            <div className="columns-1 md:columns-2 lg:columns-3 gap-8">
-               {[1,2,3].map(i => <div key={i} className="masonry-item h-[450px] rounded-[2.5rem] bg-card/40 animate-pulse border border-border/10 mb-8" />)}
+            <div className="columns-1 md:columns-2 lg:columns-3 gap-6 sm:gap-8">
+               {[1,2,3].map(i => <div key={i} className="masonry-item h-[300px] sm:h-[450px] rounded-3xl bg-card/40 animate-pulse border border-border/10 mb-6 sm:mb-8" />)}
             </div>
           ) : filteredMy.length > 0 ? (
-            <div className="columns-1 md:columns-2 lg:columns-3 gap-8 masonry-grid">
+            <div className="columns-1 md:columns-2 lg:columns-3 gap-6 sm:gap-8 masonry-grid">
               {filteredMy.map((snippet) => (
                 <SnippetCard key={snippet.id} snippet={snippet} />
               ))}
             </div>
           ) : (
-            <div className="flex h-[50vh] flex-col items-center justify-center rounded-[4rem] border-2 border-dashed text-center bg-card/20">
-              <div className="p-10 rounded-full bg-secondary/10 mb-8">
-                <CodeIcon className="h-20 w-20 text-muted-foreground/30" />
+            <div className="flex h-[40vh] sm:h-[50vh] flex-col items-center justify-center rounded-3xl sm:rounded-[4rem] border-2 border-dashed text-center bg-card/10 p-6">
+              <div className="p-6 sm:p-10 rounded-full bg-secondary/10 mb-6 sm:mb-8">
+                <CodeIcon className="h-12 w-12 sm:h-20 sm:w-20 text-muted-foreground/30" />
               </div>
-              <h3 className="text-3xl font-black mb-3">Library Static</h3>
-              <p className="text-muted-foreground max-w-sm text-lg font-medium">
-                Your personal secure vault is empty. Start clipping from chat or create a new snippet to fill it up.
+              <h3 className="text-2xl sm:text-3xl font-black mb-3">Library Static</h3>
+              <p className="text-muted-foreground max-w-sm text-sm sm:text-lg font-medium">
+                Your personal secure vault is empty. Start clipping from chat or create a new snippet.
               </p>
             </div>
           )}
