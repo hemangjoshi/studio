@@ -1,0 +1,17 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "avatar-placeholder",
+      "description": "Default developer avatar",
+      "imageUrl": "https://picsum.photos/seed/dev1/200/200",
+      "imageHint": "developer avatar"
+    },
+    {
+      "id": "hero-image",
+      "description": "Abstract coding background",
+      "imageUrl": "https://picsum.photos/seed/code1/1200/600",
+      "imageHint": "coding background"
+    }
+  ]
+}
