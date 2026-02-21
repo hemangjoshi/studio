@@ -1,13 +1,13 @@
-
 import type { Metadata } from 'next';
 import './globals.css';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { Navbar } from '@/components/navbar';
+import { Footer } from '@/components/footer';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'CodeShare Connect',
-  description: 'Global code snippet sharing and real-time developer chat.',
+  title: 'CodeShare Connect | Global Dev Platform',
+  description: 'Global code snippet sharing and real-time developer chat with AI-powered insights.',
 };
 
 export default function RootLayout({
@@ -22,12 +22,13 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased min-h-screen pb-20 md:pb-0 md:pt-16">
+      <body className="font-body antialiased min-h-screen flex flex-col">
         <FirebaseClientProvider>
           <Navbar />
-          <main className="container mx-auto px-4 py-8">
+          <main className="flex-1 container mx-auto px-4 py-20">
             {children}
           </main>
+          <Footer />
           <Toaster />
         </FirebaseClientProvider>
       </body>
