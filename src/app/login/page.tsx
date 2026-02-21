@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -17,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Chrome } from "lucide-react";
+import { Chrome, Mail, Lock, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -45,18 +44,17 @@ export default function LoginPage() {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        // Create user doc
         setDocumentNonBlocking(doc(db, "users", userCredential.user.uid), {
           id: userCredential.user.uid,
           displayName: email.split("@")[0],
           photoURL: `https://picsum.photos/seed/${userCredential.user.uid}/200/200`,
         }, { merge: true });
       }
-      toast({ title: isLogin ? "Welcome back!" : "Account created!" });
+      toast({ title: isLogin ? "Welcome back!" : "Access Granted" });
     } catch (error: any) {
       toast({ 
         variant: "destructive", 
-        title: "Authentication failed", 
+        title: "Auth Exception", 
         description: error.message 
       });
     } finally {
@@ -78,74 +76,104 @@ export default function LoginPage() {
           photoURL: user.photoURL || `https://picsum.photos/seed/${user.uid}/200/200`,
         }, { merge: true });
       }
+      toast({ title: "Google Auth Successful" });
     } catch (error: any) {
-      toast({ 
-        variant: "destructive", 
-        title: "Google sign-in failed", 
-        description: error.message 
-      });
+      if (error.code === 'auth/unauthorized-domain') {
+        toast({
+          variant: "destructive",
+          title: "Domain Restricted",
+          description: "This domain is not authorized in Firebase Console. Please add your Netlify URL to the Authorized Domains list."
+        });
+      } else {
+        toast({ 
+          variant: "destructive", 
+          title: "Sign-in Failed", 
+          description: error.message 
+        });
+      }
     }
   };
 
   if (isUserLoading) return null;
 
   return (
-    <div className="flex min-h-[70vh] items-center justify-center">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">{isLogin ? "Sign in" : "Create account"}</CardTitle>
-          <CardDescription>
-            Enter your email and password to access CodeShare
-          </CardDescription>
+    <div className="flex min-h-[80vh] items-center justify-center p-4">
+      <Card className="w-full max-w-md border-none shadow-2xl bg-card/60 backdrop-blur-3xl rounded-[2.5rem] overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-accent to-primary" />
+        <CardHeader className="space-y-4 pt-12 text-center">
+          <div className="mx-auto w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-2">
+            <Lock className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <CardTitle className="text-4xl font-black tracking-tighter">
+              {isLogin ? "Auth Required" : "Create Profile"}
+            </CardTitle>
+            <CardDescription className="text-base font-medium mt-2">
+              Sync your syntax across the global network.
+            </CardDescription>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6 px-8 pb-8">
           <form onSubmit={handleAuth} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder="dev@codeshare.com" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+              <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60">Email Address</Label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="name@company.com" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12 pl-12 rounded-xl bg-secondary/30 border-none shadow-inner"
+                  required
+                />
+              </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input 
-                id="password" 
-                type="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <Label htmlFor="password" title="password" className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60">Master Key</Label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  id="password" 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-12 pl-12 rounded-xl bg-secondary/30 border-none shadow-inner"
+                  required
+                />
+              </div>
             </div>
-            <Button className="w-full" type="submit" disabled={loading}>
-              {loading ? "Please wait..." : (isLogin ? "Sign In" : "Register")}
+            <Button className="w-full h-14 rounded-2xl font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all gap-2 mt-4" type="submit" disabled={loading}>
+              {loading ? "Processing..." : (isLogin ? "Authenticate" : "Initialize")}
+              <ArrowRight className="h-5 w-5" />
             </Button>
           </form>
+
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+              <span className="w-full border-t border-border/50" />
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+            <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest">
+              <span className="bg-card/60 px-4 text-muted-foreground">Unified Login</span>
             </div>
           </div>
-          <Button variant="outline" className="w-full" onClick={handleGoogleSignIn}>
-            <Chrome className="mr-2 h-4 w-4" />
-            Google
-          </Button>
+
+          <div className="grid grid-cols-1 gap-3">
+            <Button variant="outline" className="h-14 rounded-2xl font-black gap-3 border-border/60 hover:bg-secondary/50 transition-all" onClick={handleGoogleSignIn}>
+              <Chrome className="h-5 w-5" />
+              Sign in with Google
+            </Button>
+          </div>
         </CardContent>
-        <CardFooter>
-          <p className="text-center text-sm text-muted-foreground w-full">
-            {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+        <CardFooter className="bg-secondary/20 p-6 flex flex-col items-center gap-2">
+          <p className="text-center text-sm font-semibold text-muted-foreground">
+            {isLogin ? "New to the grid?" : "Already synchronized?"}{" "}
             <button 
               onClick={() => setIsLogin(!isLogin)}
-              className="font-semibold text-primary underline-offset-4 hover:underline"
+              className="text-primary font-black hover:underline underline-offset-4"
             >
-              {isLogin ? "Register here" : "Sign in here"}
+              {isLogin ? "Register Terminal" : "Access Account"}
             </button>
           </p>
         </CardFooter>
