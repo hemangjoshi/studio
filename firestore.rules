@@ -14,22 +14,18 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
     // --- User Profiles ---
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
     }
 
     // --- Code Snippets ---
     match /codeSnippets/{snippetId} {
-      // Allow list and get if public OR if the authenticated user is the author.
-      // We use 'read' to cover both 'get' and 'list' with the same logic.
+      // Allow read (get and list) if the snippet is public OR if the user is the author.
+      // Firestore requires queries to match these constraints to satisfy the rules.
       allow read: if resource.data.isPublic == true || (isSignedIn() && resource.data.authorId == request.auth.uid);
       
-      // Creation requires the user to be signed in and set themselves as author.
+      // Creation requires the user to be signed in and set themselves as the author.
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
       
       // Updates and deletes are restricted to the author.

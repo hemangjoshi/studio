@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { 
   collection, 
@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Globe, Lock, Search, Code as CodeIcon, User } from "lucide-react";
+import { Plus, Globe, Lock, Search, Code as CodeIcon, User, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 
@@ -42,6 +42,7 @@ export default function SnippetsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
+  // Query for public snippets: All snippets where isPublic is true
   const publicQuery = useMemoFirebase(() => {
     return query(
       collection(db, "codeSnippets"), 
@@ -51,6 +52,7 @@ export default function SnippetsPage() {
   }, [db]);
   const { data: publicSnippets, isLoading: publicLoading } = useCollection(publicQuery);
 
+  // Query for user's own snippets: All snippets where authorId matches current user
   const myQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -58,32 +60,32 @@ export default function SnippetsPage() {
       where("authorId", "==", user.uid),
       orderBy("createdAt", "desc")
     );
-  }, [db, user]);
+  }, [db, user?.uid]);
   const { data: mySnippets, isLoading: myLoading } = useCollection(myQuery);
 
-  const handleCreateSnippet = async () => {
+  const handleCreateSnippet = () => {
     if (!user) {
       toast({ variant: "destructive", title: "Authentication required", description: "Please sign in to create snippets." });
       return;
     }
-    if (!newTitle || !newCode) {
+    if (!newTitle.trim() || !newCode.trim()) {
       toast({ variant: "destructive", title: "Missing fields", description: "Title and code are required." });
       return;
     }
 
     addDocumentNonBlocking(collection(db, "codeSnippets"), {
-      title: newTitle,
-      codeContent: newCode,
+      title: newTitle.trim(),
+      codeContent: newCode.trim(),
       isPublic,
       authorId: user.uid,
-      authorName: user.displayName || user.email?.split("@")[0] || "Dev User",
+      authorName: user.displayName || user.email?.split("@")[0] || "Anonymous Developer",
       createdAt: serverTimestamp(),
     });
 
     setIsDialogOpen(false);
     setNewTitle("");
     setNewCode("");
-    toast({ title: "Snippet created successfully!" });
+    toast({ title: "Snippet created!", description: "Your code has been saved." });
   };
 
   const SnippetCard = ({ snippet }: { snippet: any }) => (
@@ -94,7 +96,7 @@ export default function SnippetsPage() {
             <CardTitle className="text-lg line-clamp-1">{snippet.title}</CardTitle>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <User className="h-3 w-3" />
-              <span>{snippet.authorName || "Anonymous"}</span>
+              <span className="truncate max-w-[120px]">{snippet.authorName || "Anonymous"}</span>
               <span>•</span>
               <span>{snippet.createdAt?.toDate ? formatDistanceToNow(snippet.createdAt.toDate()) + ' ago' : 'Just now'}</span>
             </div>
@@ -112,10 +114,11 @@ export default function SnippetsPage() {
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">
-        <Button variant="ghost" size="sm" className="w-full gap-2 text-primary" onClick={() => {
+        <Button variant="ghost" size="sm" className="w-full gap-2 text-primary hover:text-primary hover:bg-primary/10" onClick={() => {
           navigator.clipboard.writeText(snippet.codeContent);
-          toast({ title: "Copied to clipboard" });
+          toast({ title: "Copied!", description: "Code snippet copied to clipboard." });
         }}>
+          <Copy className="h-4 w-4" />
           Copy Code
         </Button>
       </CardFooter>
@@ -134,65 +137,68 @@ export default function SnippetsPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight">Code Snippets</h1>
-          <p className="text-muted-foreground">Manage and explore reusable code snippets</p>
+          <p className="text-muted-foreground">Store, share, and discover useful code snippets</p>
         </div>
-        <div className="flex gap-2">
-          <div className="relative w-full md:w-64">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 md:w-64">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input 
               placeholder="Search snippets..." 
-              className="pl-10"
+              className="pl-10 h-10 rounded-full bg-secondary/30"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
+              <Button className="gap-2 rounded-full px-6 h-10 shadow-lg shadow-primary/20">
                 <Plus className="h-4 w-4" />
-                <span>New Snippet</span>
+                <span>Create</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl sm:rounded-2xl">
+            <DialogContent className="max-w-2xl sm:rounded-2xl border-primary/20 bg-card/95 backdrop-blur-md">
               <DialogHeader>
-                <DialogTitle>Create New Snippet</DialogTitle>
+                <DialogTitle className="text-2xl">New Code Snippet</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 py-4">
+              <div className="space-y-5 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Title</Label>
+                  <Label htmlFor="title" className="text-sm font-semibold">Title</Label>
                   <Input 
                     id="title" 
-                    placeholder="e.g., React Debounce Hook" 
+                    placeholder="e.g., Next.js API Route Template" 
                     value={newTitle}
                     onChange={(e) => setNewTitle(e.target.value)}
+                    className="bg-secondary/20 border-border/50"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="code">Code Content</Label>
+                  <Label htmlFor="code" className="text-sm font-semibold">Code</Label>
                   <Textarea 
                     id="code" 
                     placeholder="Paste your code here..." 
-                    className="code-editor min-h-[200px] font-mono text-xs"
+                    className="code-editor min-h-[250px] font-mono text-xs bg-secondary/40 border-border/50 resize-none focus-visible:ring-primary/50"
                     value={newCode}
                     onChange={(e) => setNewCode(e.target.value)}
                   />
                 </div>
-                <div className="flex items-center justify-between space-x-2 rounded-lg border p-3">
+                <div className="flex items-center justify-between space-x-2 rounded-xl border border-border/50 bg-secondary/10 p-4">
                   <div className="space-y-0.5">
-                    <Label className="text-base">Privacy Settings</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {isPublic ? "Visible to everyone on the public feed" : "Visible only to you"}
+                    <Label className="text-sm font-semibold">Public Visibility</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {isPublic ? "Available to the entire developer community" : "Only you can see this snippet"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">{isPublic ? "Public" : "Private"}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      {isPublic ? "Public" : "Private"}
+                    </span>
                     <Switch checked={isPublic} onCheckedChange={setIsPublic} />
                   </div>
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleCreateSnippet}>Save Snippet</Button>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="rounded-full">Cancel</Button>
+                <Button onClick={handleCreateSnippet} className="rounded-full px-8">Save Snippet</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -200,20 +206,20 @@ export default function SnippetsPage() {
       </div>
 
       <Tabs defaultValue="public" className="w-full">
-        <TabsList className="mb-8 h-12 w-full max-w-md bg-secondary/50 p-1">
-          <TabsTrigger value="public" className="flex-1 gap-2 rounded-md">
+        <TabsList className="mb-8 h-12 w-full max-w-md bg-secondary/30 p-1 rounded-full border border-border/50">
+          <TabsTrigger value="public" className="flex-1 gap-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Globe className="h-4 w-4" />
             Public Feed
           </TabsTrigger>
-          <TabsTrigger value="my" className="flex-1 gap-2 rounded-md">
+          <TabsTrigger value="my" className="flex-1 gap-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Lock className="h-4 w-4" />
-            My Collection
+            My Snippets
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="public">
+        <TabsContent value="public" className="mt-0 outline-none">
           {publicLoading ? (
-             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 opacity-50">
-                {[1,2,3].map(i => <div key={i} className="h-64 rounded-xl bg-card animate-pulse border" />)}
+             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {[1,2,3,4,5,6].map(i => <div key={i} className="h-64 rounded-xl bg-card animate-pulse border border-border/20 shadow-sm" />)}
              </div>
           ) : filteredPublic.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -222,24 +228,30 @@ export default function SnippetsPage() {
               ))}
             </div>
           ) : (
-            <div className="flex h-64 flex-col items-center justify-center rounded-2xl border border-dashed text-center">
-              <Globe className="mb-4 h-12 w-12 text-muted-foreground/30" />
-              <p className="text-lg font-medium text-muted-foreground">No public snippets found</p>
+            <div className="flex h-80 flex-col items-center justify-center rounded-3xl border border-dashed bg-card/10 text-center px-4">
+              <div className="h-16 w-16 rounded-full bg-secondary/20 flex items-center justify-center mb-4">
+                <Globe className="h-8 w-8 text-muted-foreground/40" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">No snippets yet</h3>
+              <p className="text-muted-foreground max-w-sm">The public feed is currently empty. Be the first to share something amazing with the world!</p>
             </div>
           )}
         </TabsContent>
-        <TabsContent value="my">
+        <TabsContent value="my" className="mt-0 outline-none">
           {!user ? (
-            <div className="flex h-64 flex-col items-center justify-center rounded-2xl border border-dashed text-center">
-              <Lock className="mb-4 h-12 w-12 text-muted-foreground/30" />
-              <p className="text-lg font-medium text-muted-foreground">Sign in to view your collection</p>
-              <Button variant="link" onClick={() => router.push('/login')} className="mt-2">
+            <div className="flex h-80 flex-col items-center justify-center rounded-3xl border border-dashed bg-card/10 text-center px-4">
+              <div className="h-16 w-16 rounded-full bg-secondary/20 flex items-center justify-center mb-4">
+                <Lock className="h-8 w-8 text-muted-foreground/40" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Private Collection</h3>
+              <p className="text-muted-foreground max-w-sm mb-6">Sign in to start building your personal library of reusable code snippets.</p>
+              <Button onClick={() => router.push('/login')} className="rounded-full px-8">
                 Sign In Now
               </Button>
             </div>
           ) : myLoading ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 opacity-50">
-               {[1,2].map(i => <div key={i} className="h-64 rounded-xl bg-card animate-pulse border" />)}
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+               {[1,2,3].map(i => <div key={i} className="h-64 rounded-xl bg-card animate-pulse border border-border/20 shadow-sm" />)}
             </div>
           ) : filteredMy.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -248,11 +260,14 @@ export default function SnippetsPage() {
               ))}
             </div>
           ) : (
-            <div className="flex h-64 flex-col items-center justify-center rounded-2xl border border-dashed text-center">
-              <CodeIcon className="mb-4 h-12 w-12 text-muted-foreground/30" />
-              <p className="text-lg font-medium text-muted-foreground">You haven't saved any snippets yet</p>
-              <Button variant="link" onClick={() => setIsDialogOpen(true)} className="mt-2">
-                Create your first one
+            <div className="flex h-80 flex-col items-center justify-center rounded-3xl border border-dashed bg-card/10 text-center px-4">
+              <div className="h-16 w-16 rounded-full bg-secondary/20 flex items-center justify-center mb-4">
+                <CodeIcon className="h-8 w-8 text-muted-foreground/40" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Your library is empty</h3>
+              <p className="text-muted-foreground max-w-sm mb-6">Start saving your favorite code fragments for easy access later.</p>
+              <Button onClick={() => setIsDialogOpen(true)} className="rounded-full px-8">
+                Create First Snippet
               </Button>
             </div>
           )}
