@@ -29,7 +29,7 @@ export function Navbar() {
           <div className="bg-primary p-1.5 rounded-xl shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
             <Code className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
           </div>
-          <span className="hidden sm:inline bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent">CodeShare</span>
+          <span className="bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent lowercase tracking-tighter">codeShare</span>
         </Link>
 
         <div className="flex items-center gap-2 md:gap-4">
