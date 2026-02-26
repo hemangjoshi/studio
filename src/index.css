@@ -1,13 +1,301 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-obsidian text-text-secondary font-sans antialiased;
+    background-image: 
+      radial-gradient(ellipse at 50% 0%, rgba(30, 30, 30, 0.5) 0%, transparent 50%),
+      radial-gradient(ellipse at 100% 100%, rgba(59, 130, 246, 0.05) 0%, transparent 40%),
+      radial-gradient(ellipse at 0% 100%, rgba(139, 92, 246, 0.05) 0%, transparent 40%);
+    min-height: 100vh;
+  }
+
+  ::selection {
+    @apply bg-sapphire-500/30 text-text-primary;
+  }
+  
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-sapphire-500;
+  }
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+@layer components {
+  /* ========== Glass Card ========== */
+  .glass-card {
+    @apply bg-charcoal/60 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl;
+    background: linear-gradient(
+      135deg,
+      rgba(26, 26, 26, 0.8) 0%,
+      rgba(18, 18, 18, 0.6) 100%
+    );
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  /* ========== Primary Button ========== */
+  .btn-primary {
+    @apply relative overflow-hidden bg-gradient-to-r from-sapphire-500 to-sapphire-700 
+           text-white font-semibold py-3.5 px-8 rounded-xl
+           transition-all duration-200 ease-out
+           shadow-lg hover:shadow-glow-sapphire
+           active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent
+           opacity-0 hover:opacity-100 transition-opacity duration-300;
+  }
+
+  /* ========== Success Button ========== */
+  .btn-success {
+    @apply relative overflow-hidden bg-gradient-to-r from-emerald-500 to-emerald-700 
+           text-white font-semibold py-3.5 px-8 rounded-xl
+           transition-all duration-200 ease-out
+           shadow-lg hover:shadow-glow-emerald
+           active:scale-[0.98];
+  }
+
+  /* ========== Secondary Button ========== */
+  .btn-secondary {
+    @apply bg-transparent border border-smoke text-text-secondary
+           font-medium py-3 px-6 rounded-xl
+           transition-all duration-200 ease-out
+           hover:border-sapphire-500 hover:text-text-primary hover:bg-sapphire-500/10
+           active:scale-[0.98];
+  }
+
+  /* ========== Danger Button ========== */
+  .btn-danger {
+    @apply relative overflow-hidden bg-gradient-to-r from-burgundy-500 to-burgundy-700 
+           text-white font-semibold py-3 px-6 rounded-xl
+           transition-all duration-200 ease-out
+           shadow-lg hover:shadow-glow-burgundy
+           active:scale-[0.98];
+  }
+
+  /* ========== Glow Badge ========== */
+  .glow-badge {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full
+           bg-emerald-500/10 border border-emerald-500/30
+           text-emerald-400 text-xs font-semibold
+           backdrop-blur-sm;
+  }
+
+  .glow-badge::before {
+    content: '';
+    @apply w-2 h-2 bg-emerald-400 rounded-full animate-pulse;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+  }
+
+  /* ========== Drop Zone ========== */
+  .drop-zone {
+    @apply relative flex flex-col items-center justify-center gap-4
+           border-2 border-dashed border-smoke rounded-2xl p-12
+           cursor-pointer transition-all duration-200 ease-out
+           bg-charcoal/30 backdrop-blur-sm
+           hover:border-sapphire-500/50 hover:bg-charcoal/50
+           active:scale-[0.99];
+  }
+
+  .drop-zone-active {
+    @apply border-sapphire-500 bg-sapphire-500/10 scale-[1.01] shadow-glow-sapphire;
+  }
+
+  .drop-zone-drag {
+    @apply border-sapphire-400 bg-sapphire-500/5;
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.2);
+  }
+
+  /* ========== Alert Styles ========== */
+  .alert-error {
+    @apply flex items-start gap-3 bg-burgundy-500/10 border border-burgundy-500/30 
+           text-burgundy-300 rounded-xl px-4 py-3.5 
+           backdrop-blur-sm;
+  }
+
+  .alert-warning {
+    @apply flex items-start gap-3 bg-amethyst-500/10 border border-amethyst-500/30 
+           text-amethyst-300 rounded-xl px-4 py-3.5
+           backdrop-blur-sm;
+  }
+
+  .alert-success {
+    @apply flex items-start gap-3 bg-emerald-500/10 border border-emerald-500/30 
+           text-emerald-300 rounded-xl px-4 py-3.5
+           backdrop-blur-sm;
+  }
+
+  .alert-info {
+    @apply flex items-start gap-3 bg-sapphire-500/10 border border-sapphire-500/30 
+           text-sapphire-300 rounded-xl px-4 py-3.5
+           backdrop-blur-sm;
+  }
+
+  /* ========== Stat Badge ========== */
+  .stat-badge {
+    @apply flex flex-col items-center gap-2 p-4 rounded-xl
+           bg-charcoal/50 border border-white/5
+           backdrop-blur-sm;
+  }
+
+  /* ========== Navigation ========== */
+  .nav-glass {
+    @apply sticky top-0 z-50
+           bg-obsidian/80 backdrop-blur-xl
+           border-b border-white/5
+           shadow-lg;
+  }
+
+  /* ========== Gradient Text ========== */
+  .text-gradient {
+    @apply bg-gradient-to-r from-sapphire-400 via-amethyst-400 to-sapphire-400 
+           bg-clip-text text-transparent;
+    background-size: 200% auto;
+    animation: shimmer 3s linear infinite;
+  }
+
+  .text-gradient-sapphire {
+    @apply bg-gradient-to-r from-sapphire-400 to-sapphire-600 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-amethyst {
+    @apply bg-gradient-to-r from-amethyst-400 to-amethyst-600 bg-clip-text text-transparent;
+  }
+
+  /* ========== Card Hover Effects ========== */
+  .card-hover {
+    @apply transition-all duration-200 ease-out
+           hover:border-sapphire-500/30 hover:shadow-glow-sapphire/30
+           hover:translate-y-[-2px];
+  }
+
+  /* ========== Input Styles ========== */
+  .input-dark {
+    @apply bg-charcoal/50 border border-smoke rounded-xl px-4 py-3
+           text-text-primary placeholder:text-text-muted
+           transition-all duration-200
+           focus:border-sapphire-500 focus:ring-2 focus:ring-sapphire-500/20
+           focus:outline-none;
+  }
+
+  /* ========== Link Styles ========== */
+  .link-accent {
+    @apply text-text-secondary underline-offset-4
+           transition-all duration-200
+           hover:text-sapphire-400 hover:underline;
+  }
+
+  /* ========== Divider ========== */
+  .divider {
+    @apply w-px h-12 bg-gradient-to-b from-transparent via-smoke to-transparent;
+  }
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-charcoal rounded-full;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-smoke rounded-full hover:bg-sapphire-500/50;
+  transition: background-color 0.2s;
+}
+
+/* Text shadow utilities */
+.text-shadow-glow {
+  text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+}
+
+.text-shadow-glow-emerald {
+  text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ========== Custom Animations ========== */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes float-gentle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Spinner */
+.spinner {
+  @apply h-9 w-9 rounded-full border-4 border-sapphire-500 border-t-transparent;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Floating animation class */
+.animate-float {
+  animation: float-gentle 3s ease-in-out infinite;
+}
+
+/* Gradient background animation */
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease infinite;
+}
+
+/* ===== Background Pattern ===== */
+.bg-grid-pattern {
+  background-image: 
+    linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* ===== Radial Gradient Backgrounds ===== */
+.bg-spotlight {
+  background: 
+    radial-gradient(ellipse 80% 80% at 50% -20%, rgba(59, 130, 246, 0.15), transparent),
+    radial-gradient(ellipse 60% 60% at 80% 100%, rgba(139, 92, 246, 0.1), transparent);
 }
